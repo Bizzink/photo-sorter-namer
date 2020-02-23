@@ -3,7 +3,7 @@ from tkinter import ttk
 
 
 class Inter:
-    def __init__(self, get_imgs, copy_imgs):
+    def __init__(self, get_files, copy_files):
         self.root = Tk()
         self.root.title("Photo sorter namer")
         self.root.columnconfigure(0, weight=1)
@@ -11,11 +11,11 @@ class Inter:
 
         self.source_path = StringVar()
         self.dest_path = StringVar()
-        self.img_count = StringVar()
-        self.date_format = StringVar()
-        self.date_format.set('%d-%m-%Y_%H-%M-%S')
-        self.img_types = StringVar()
-        self.img_types.set("png, jpg")
+        self.file_count = StringVar()
+        self.name_format = StringVar()
+        self.name_format.set('%o_%d-%m-%Y_%H-%M-%S')
+        self.file_types = StringVar()
+        self.file_types.set("png, jpg")
 
         main_frame = ttk.Frame(self.root)
         main_frame.grid(row=0, column=0, sticky=(N, S, W, E))
@@ -29,16 +29,16 @@ class Inter:
         controls_frame.rowconfigure(0, weight=1)
 
         self.add_entry("Source path: ", 0, self.source_path, controls_frame)
-        self.add_entry("File types: ", 1, self.img_types, controls_frame, vcmd=get_imgs)
+        self.add_entry("File types: ", 1, self.file_types, controls_frame, vcmd=get_files)
 
         type_frame = ttk.Frame(controls_frame)
         type_frame.grid(column=0, row=2, sticky=(W, E))
-        ttk.Button(type_frame, text="Check", command=get_imgs).grid(column=0, row=0, sticky=(W, E))
-        ttk.Label(type_frame, textvariable=self.img_count).grid(column=1, row=0, sticky=(W, E))
+        ttk.Button(type_frame, text="Check", command=get_files).grid(column=0, row=0, sticky=(W, E))
+        ttk.Label(type_frame, textvariable=self.file_count).grid(column=1, row=0, sticky=(W, E))
         ttk.Label(controls_frame, text="").grid(column=0, row=3)
-        self.add_entry("Date format: ", 4, self.date_format, controls_frame)
+        self.add_entry("Name format: ", 4, self.name_format, controls_frame)
         self.add_entry("Destination path", 5, self.dest_path, controls_frame)
-        ttk.Button(controls_frame, text="Confirm", command=copy_imgs).grid(column=0, row=6, sticky=(W, S))
+        ttk.Button(controls_frame, text="Confirm", command=copy_files).grid(column=0, row=6, sticky=(W, S))
 
         ttk.Separator(main_frame, orient="vertical").grid(column=1, row=0)
 

@@ -3,38 +3,42 @@ import os
 import shutil
 import datetime
 
-imgs = []
+files = []
 date_ranges = {}
 prev = None
 
 
-def get_imgs():
-    """find all files in any subdirectory, if its filetype is in types, add it to imgs, set img_count to amount of files found"""
-    global imgs
-    imgs = []
+def get_files():
+    """find all files in any subdirectory, if its filetype is in types, add it to files, set file_count to amount of files found"""
+    global files
+    files = []
 
     # convert types from string to list of file extensions
-    types = ui.img_types.get()
+    types = ui.file_types.get()
     types = types.split(", ")
+
+    print(ui.source_path.get())
 
     # add . at start of extension
     for i in range(len(types)):
         if not types[i][0] == ".":
             types[i] = "." + types[i]
 
-    for root, dirs, files in os.walk(ui.source_path.get()):
-        for file in files:
+    for root, dirs, file_names in os.walk(ui.source_path.get()):
+        for file in file_names:
             # separate file name and extension
-            name, ext = os.path.splitext(f"{root}\\{file}")
+            name, ext = os.path.splitext(file)
+
+            print(root, file)
 
             # if file is correct type
             if str(ext) in types:
                 # get earlier of creation time (ctime), modification time (mtime)
                 date = datetime.datetime.fromtimestamp(min(os.path.getmtime(f"{root}\\{file}"), os.path.getctime(f"{root}\\{file}")))
 
-                imgs.append({"path": f"{root}\\{file}", "name": file, "ext": ext, "date": date})
+                files.append({"path": f"{root}\\{file}", "name": name, "ext": ext, "date": date})
 
-    ui.img_count.set(f" {len(imgs)} files found.")
+    ui.file_count.set(f" {len(files)} files found.")
 
 
 def str_to_datetime(string):
@@ -101,8 +105,46 @@ def in_range(date):
     return ""
 
 
-def copy_imgs():
-    """copys all files gotten from get_imgs() to dest_path, renames them based on date format and range prefixes"""
+def format_name(file):
+    """create a filename based on entered name format"""
+    name_format = ui.name_format.get()
+    new_name = ""
+
+    i = 0
+    while i < len(name_format):
+        # check for format codes
+        if name_format[i] == "%":
+            val = name_format[i + 1]
+
+            # %o : original file name
+            if val == "o":
+                new_name += file["name"]
+
+            # %r : range name
+            elif val == "r":
+                new_name += in_range(file["date"])
+
+            # %-* for 2 char codes
+            elif val == "-":
+                new_name += file["date"].strftime(f"%-{name_format[i + 2]}")
+                i += 1
+
+            # all other format codes
+            else:
+                new_name += file["date"].strftime(f"%{val}")
+
+            i += 2
+
+        # include non format chars as normal chars
+        else:
+            new_name += name_format[i]
+            i += 1
+
+    return new_name
+
+
+def copy_files():
+    """copys all files gotten from get_files() to dest_path, renames them based on date format and range prefixes"""
     for date_range in ui.ranges:
         if not add_range(date_range):
             return
@@ -114,31 +156,31 @@ def copy_imgs():
 
     not_copied = 0
 
-    for img in imgs:
+    for file in files:
         try:
-            shutil.copy(img["path"], dest)
+            shutil.copy(file["path"], dest)
         except shutil.SameFileError:
             not_copied += 1
             continue
 
-        name = img["name"]
-        ext = img["ext"]
-        date = img["date"].strftime(ui.date_format.get())
-        prefix = in_range(img["date"])
+        except FileNotFoundError:
+            continue
+
+        name = file["name"]
+        new_name = format_name(file)
+        ext = file["ext"]
 
         dupe = 0
         success = False
-
-        new_name = f"{prefix}_{date}"
 
         # Duplicate creation date handling
         while not success:
             try:
                 if dupe != 0:
                     # add version number if duped name
-                    os.rename(f"{dest}\\{name}", f"{dest}\\{new_name}_{dupe}{ext}")
+                    os.rename(f"{dest}\\{name}{ext}", f"{dest}\\{new_name}_{dupe}{ext}")
                 else:
-                    os.rename(f"{dest}\\{name}", f"{dest}\\{new_name}{ext}")
+                    os.rename(f"{dest}\\{name}{ext}", f"{dest}\\{new_name}{ext}")
                 success = True
 
             except FileExistsError:
@@ -146,13 +188,13 @@ def copy_imgs():
                 dupe += 1
 
         if dupe != 0:
-            rename = f"{prefix}{date}_{dupe}{ext}"
-            print(f"{dest}\\{name}".ljust(60, " ") + f"\t-->\t{dest}\\{prefix}{date}_{dupe}{ext}")
+            rename = f"{new_name}_{dupe}{ext}"
+            print(f"{dest}\\{name}{ext}".ljust(60, " ") + f"\t-->\t{dest}\\{new_name}_{dupe}{ext}")
         else:
-            rename = f"{prefix}{date}{ext}"
-            print(f"{dest}\\{name}".ljust(60, " ") + f"\t-->\t{dest}\\{prefix}{date}{ext}")
+            rename = f"{new_name}{ext}"
+            print(f"{dest}\\{name}{ext}".ljust(60, " ") + f"\t-->\t{dest}\\{new_name}{ext}")
 
-        ui.message.set(f"{name} --> {rename}")
+        ui.message.set(f"{name}{ext} --> {rename}")
         ui.root.update()
 
     if not_copied > 0:
@@ -161,5 +203,5 @@ def copy_imgs():
 
 
 if __name__ == "__main__":
-    ui = inter.Inter(get_imgs, copy_imgs)
+    ui = inter.Inter(get_files, copy_files)
     ui.root.mainloop()
